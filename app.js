@@ -1,156 +1,170 @@
-const infoBoard = document.querySelector('.info')
-const canvas = document.querySelector('.canvas')
-const width = canvas.width, height = canvas.height
-const ctx = canvas.getContext('2d')
+$('document').ready(() => {
 
-// setting up context for game
-ctx.fillStyle = 'tomato'
-var blockSize = 10
-var widthInBlocks = width / blockSize
-var heightInBlocks = height / blockSize
-var counter = 0
+    const infoBoard = document.querySelector('.info')
+    const canvas = document.querySelector('.canvas')
+    const width = canvas.width, height = canvas.height
+    const ctx = canvas.getContext('2d')
 
-class Ball {
-    constructor(x = width / 2, y = height / 2) {
-        this.x = x
-        this.y = y
-        this.radius = 10
-        this.xSpeed = 0
-        this.ySpeed = 0
-        this.dynamicSpeed = 3
-    }
+    // setting up context for game
+    ctx.fillStyle = 'tomato'
+    var blockSize = 20
+    var widthInBlocks = width / blockSize
+    var heightInBlocks = height / blockSize
+    var counter = 0
 
-    draw() {
-        ctx.beginPath()
-        ctx.arc(this.x, this.y, this.radius, Math.PI * 2, false)
-        ctx.fill()
-    }
-
-    move() {
-        this.x += this.xSpeed 
-        this.y += this.ySpeed 
-
-        if (this.x > width - this.radius) this.x = this.radius
-        if (this.x < 0 + this.radius) this.x = width - this.radius
-        if (this.y > height - this.radius) this.y = this.radius
-        if (this.y < 0 + this.radius) this.y = height - this.radius
-    }
-
-    changeDirection(direction) {
-        if (direction === 37) {
-            this.xSpeed = -this.dynamicSpeed
-            this.ySpeed = 0
-        } else if (direction === 39) {
-            this.xSpeed = this.dynamicSpeed
-            this.ySpeed = 0
+    // class for updating table`s parts
+    class Block {
+        constructor(row, col) {
+            this.row = row
+            this.col = col
         }
 
-        if (direction === 38) {
-            this.xSpeed = 0
-            this.ySpeed = -this.dynamicSpeed
-        } else if (direction === 40) {
-            this.xSpeed = 0
-            this.ySpeed = this.dynamicSpeed
+        drawBlock(color) {
+            var x = this.col * blockSize
+            var y = this.row * blockSize
+            ctx.fillStyle = color
+            ctx.fillRect(x, y, blockSize - 1, blockSize - 1)
         }
 
-        if (direction === 32)
-            this.dynamicSpeed = this.xSpeed = this.ySpeed = 0
+        moveApple() {
+            this.row = Math.floor(Math.random() * height) % blockSize + 1
+            this.col = Math.floor(Math.random() * width) % blockSize + 1
+        }
+
+        equal(other) {
+            return this.col === other.col && this.row === other.row
+        }
     }
 
-    useNewSpeed() {
-        if (this.xSpeed > 0) {
-            this.xSpeed = this.dynamicSpeed
-            this.ySpeed = 0
 
-        } else if (this.xSpeed < 0) {
-            this.xSpeed = -this.dynamicSpeed
-            this.ySpeed = 0
+    class Snake {
+        constructor() {
+            this.segments = [new Block(1, 2), new Block(1, 3), new Block(1, 4)]
+            this.direction = 'down'
+            this.nextDirection = 'down'
         }
+
+        drawSnake() {
+            for (var seg of this.segments){
+                seg.drawBlock('blue')
+            }
+            this.segments[0].drawBlock('red')
+        }
+
+        moveSnake() {
+            var head = this.segments[0]
+            var newHead
+            this.direction = this.nextDirection
+            
+            if (this.direction === 'right') {
+                newHead = new Block(head.row, head.col + 1)
+            } else if (this.direction === 'left') {
+                newHead = new Block(head.row, head.col - 1)
+            } else if (this.direction === 'up') {
+                newHead = new Block(head.row - 1, head.col)
+            } else if (this.direction === 'down') {
+                newHead = new Block(head.row + 1, head.col)
+            }
+
+            this.segments.unshift(newHead)
+            newHead.drawBlock('red')
+
+            if (this.checkCollisions(newHead)) {
+                gameOver()
+                return
+            }
+
+            if (newHead.equal(apple)) {
+                console.log(apple)
+                apple.moveApple()
+                console.log(apple)
+                apple.drawBlock('green')
+                counter++
+            } else this.segments.pop()
+        }
+
+        changeDirection (key) {
+            const keys = {37: 'left', 38: 'up', 39: 'right', 40: 'down'}
+            var newDirection = keys[key]
+
+            if (this.direction === "up" && newDirection === "down") {
+                return;
+            } else if (this.direction === "right" && newDirection === "left") {
+                return;
+            } else if (this.direction === "down" && newDirection === "up") {
+                return;
+            } else if (this.direction === "left" && newDirection === "right") {
+                return;
+            }
         
-        if (this.ySpeed > 0) {
-            this.ySpeed = this.dynamicSpeed
-            this.xSpeed = 0
+            this.nextDirection = keys[key]
+        }
 
-        } else if (this.ySpeed < 0) {
-            this.ySpeed = -this.dynamicSpeed
-            this.xSpeed = 0
+        checkCollisions(other) {
+            if (this.segments.some((element, index) => element.row === other.row 
+                                    && element.col === other.col && index) 
+                                    || other.col > width / blockSize - 1 
+                                    || other.row > height / blockSize - 1 
+                                    || other.col < 1 
+                                    || other.row < 1)
+                return true
+        }
+    }
+
+    function gameTable() {
+        infoBoard.innerHTML = `Counter: ${counter}`
+        ctx.fillStyle = "Gray"
+        ctx.fillRect(0, 0, width, blockSize - 1)
+        ctx.fillRect(0, height - blockSize, width, blockSize)
+        ctx.fillRect(0, 0, blockSize - 1, height)
+        ctx.fillRect(width - blockSize, 0, blockSize, height)
+    }
+
+    function winGame() {
+        clearInterval(gameProcess)
+        ctx.clearRect(0, 0, width, height)
+        ctx.font = "20px Courier"
+        ctx.textAlign = 'center'
+        ctx.fillText(`You are a winner! Score: ${counter}`, width / 2, height / 2)
+        gameTable()
+    }
+
+    function gameOver() {
+        clearInterval(gameProcess)
+        ctx.clearRect(0, 0, width, height)
+        ctx.font = "20px Courier"
+        ctx.textAlign = 'center'
+        ctx.fillText(`Game over! Score: ${counter}`, width / 2, height / 2)
+        gameTable()
+    }
+
+    const snake = new Snake()
+    const apple = new Block(7, 2)
+    
+    $('body').keydown(key => snake.changeDirection(key.keyCode))
+    
+    // creating table
+    boxex = []
+    for (var i = 0; i < width / blockSize; i++) boxex.push([])
+    for (var i = 0; i < width / blockSize; i++) {
+        for (var j = 0; j < height / blockSize; j++) {
+            boxex[i].push(new Block(i, j))
         }
     }
     
-    setSpeedByKeyboard(speed) {
-        const keys = [49, 50, 51, 52, 53, 54]
-        var speedIndex = 0
-        if (keys.some(elem => elem === speed)){
-            keys.forEach((elem, index) => {
-                elem === speed ? speedIndex = index : 0
-            })
-            this.dynamicSpeed = speedIndex + 1
-            this.useNewSpeed()
-        }
-    }
-
-    changeSize(size = 1) {
-        if (size === 13){
-            if (this.radius < 20){
-                this.radius += 1
-            } else {
-                this.radius = 10
+    var gameProcess = setInterval(() => {
+        ctx.clearRect(0, 0, width, height)
+        for (var i = 0; i < width / blockSize; i++) {
+            for (var j = 0; j < height / blockSize; j++) {
+                boxex[i][j].drawBlock('grey')
             }
         }
-        if (size === 1){
-            this.radius += 2
-        }
-    }
-
-    boostSpeed(speed) {
-        if (speed === 16) {
-            if (this.dynamicSpeed === 10)
-                this.dynamicSpeed = 3
-            else this.dynamicSpeed = 10
-            this.useNewSpeed()
-        }
-    }
-}
-
-function borderPlusScore() {
-    ctx.strokeRect(0, 0, width, height)
-    infoBoard.innerHTML = `Speed: ${ball.dynamicSpeed},
-                           Size: ${ball.radius},
-                           Counter: ${counter}`
-}
-
-
-const ball = new Ball()
-const apple = new Ball()
-
-$('body').keydown(key => ball.setSpeedByKeyboard(key.keyCode))
-$('body').keydown(key => ball.changeDirection(key.keyCode))
-$('body').keydown(key => ball.changeSize(key.keyCode))
-$('body').keydown(key => ball.boostSpeed(key.keyCode))
-
-var game = setInterval(() => {
-    ctx.clearRect(0, 0, width, height)
-    apple.draw()
-    ball.draw()
-    ball.move()
-
-    if (ball.x >= apple.x - ball.radius && ball.x <= apple.x + ball.radius
-        && ball.y >= apple.y - ball.radius && ball.y <= apple.y + ball.radius){
-        apple.x = Math.floor(Math.random() * width)
-        apple.y = Math.floor(Math.random() * height)
-        ball.changeSize()
-        counter++
-    }
-
-    if (ball.radius > 150) {
-        clearInterval(game)
-        ctx.clearRect(0, 0, width, height)
-    } 
+        apple.drawBlock('green')
+        snake.moveSnake()
+        snake.drawSnake()
+        gameTable()
+        if (counter > 150) winGame()
     
-    borderPlusScore()
-}, 40)
-
-
-
-
+    }, 150)
+})
 
