@@ -3,13 +3,17 @@ const canvas = document.querySelector('.canvas')
 const width = canvas.width, height = canvas.height
 const ctx = canvas.getContext('2d')
 
-// setting up context for canvas
+// setting up context for game
 ctx.fillStyle = 'tomato'
+var blockSize = 10
+var widthInBlocks = width / blockSize
+var heightInBlocks = height / blockSize
+var counter = 0
 
 class Ball {
-    constructor() {
-        this.x = width / 2
-        this.y = height / 2
+    constructor(x = width / 2, y = height / 2) {
+        this.x = x
+        this.y = y
         this.radius = 10
         this.xSpeed = 0
         this.ySpeed = 0
@@ -85,13 +89,16 @@ class Ball {
         }
     }
 
-    changeSize(size) {
+    changeSize(size = 1) {
         if (size === 13){
             if (this.radius < 20){
                 this.radius += 1
             } else {
                 this.radius = 10
             }
+        }
+        if (size === 1){
+            this.radius += 2
         }
     }
 
@@ -105,8 +112,16 @@ class Ball {
     }
 }
 
+function borderPlusScore() {
+    ctx.strokeRect(0, 0, width, height)
+    infoBoard.innerHTML = `Speed: ${ball.dynamicSpeed},
+                           Size: ${ball.radius},
+                           Counter: ${counter}`
+}
 
-ball = new Ball()
+
+const ball = new Ball()
+const apple = new Ball()
 
 $('body').keydown(key => ball.setSpeedByKeyboard(key.keyCode))
 $('body').keydown(key => ball.changeDirection(key.keyCode))
@@ -115,11 +130,24 @@ $('body').keydown(key => ball.boostSpeed(key.keyCode))
 
 var game = setInterval(() => {
     ctx.clearRect(0, 0, width, height)
+    apple.draw()
     ball.draw()
     ball.move()
-    ctx.stroke()
-    ctx.strokeRect(0, 0, width, height)
-    infoBoard.innerHTML = `Speed: ${ball.dynamicSpeed}, Size: ${ball.radius}, Position: x = ${ball.x}, y = ${ball.y}`
+
+    if (ball.x >= apple.x - ball.radius && ball.x <= apple.x + ball.radius
+        && ball.y >= apple.y - ball.radius && ball.y <= apple.y + ball.radius){
+        apple.x = Math.floor(Math.random() * width)
+        apple.y = Math.floor(Math.random() * height)
+        ball.changeSize()
+        counter++
+    }
+
+    if (ball.radius > 150) {
+        clearInterval(game)
+        ctx.clearRect(0, 0, width, height)
+    } 
+    
+    borderPlusScore()
 }, 40)
 
 
